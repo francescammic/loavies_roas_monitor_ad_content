@@ -1,0 +1,42 @@
+config {
+  type: "table",
+  schema: "analytics",
+  name: "roas_monitor_ad_content_prod_weekly",
+  description: "",
+}
+
+SELECT
+  DATE_TRUNC(date, WEEK(MONDAY)) AS week_start_date,
+  week_of_the_year,
+  month_of_the_year,
+  country,
+  campaign_name,
+  advertising_source,
+  campaign_type,
+  SUM(ad_cost) AS weekly_ad_cost
+FROM ${ref('roas_monitor_ad_content_prod_daily')}
+GROUP BY
+  week_start_date,
+  week_of_the_year,
+  month_of_the_year,
+  country,
+  campaign_name,
+  advertising_source,
+  campaign_type
+ORDER BY
+  week_start_date DESC
+
+-- Pre-operations for table creation and cleanup
+pre_operations {
+  CREATE TABLE IF NOT EXISTS ${self()} (
+    week_start_date DATE,
+    week_of_the_year STRING,
+    month_of_the_year STRING,
+    country STRING,
+    campaign_name STRING,
+    advertising_source STRING,
+    campaign_type STRING,
+    weekly_ad_cost FLOAT64
+  ) ;
+}
+

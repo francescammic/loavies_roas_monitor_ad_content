@@ -1,0 +1,228 @@
+config {
+  type: "incremental",
+  schema: "analytics",
+  name: "roas_monitor_ad_content_prod_daily",
+  description: "",
+  bigquery: {
+    partitionBy: "date"
+  }
+}
+
+
+WITH 
+google_ads AS (
+ SELECT
+  date,
+  FORMAT_DATE('%A', date) AS day_of_the_week,
+  CAST(EXTRACT(WEEK FROM date) AS STRING) AS week_of_the_year,
+  CAST(EXTRACT(MONTH FROM date) AS STRING) AS month_of_the_year,
+    CASE 
+    WHEN REGEXP_CONTAINS(account_name, r'(?i)NL') THEN 'NL'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)BE') THEN 'BE'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)FR') THEN 'FR'
+    ELSE 'NOT SET'
+    END AS country,
+  campaign AS campaign_name,
+  'google_ads' AS advertising_source,
+  CASE
+      WHEN REGEXP_CONTAINS(campaign, r'(?i).*branded.*') THEN 'branded'
+      WHEN NOT REGEXP_CONTAINS(campaign, r'(?i).*branded.*') THEN 'non-branded'
+      ELSE campaign
+    END AS campaign_type,
+  cost AS ad_cost
+FROM `roas_monitor.googlegoogle_ads_3d`
+)
+,
+
+  -- Facebook Advertising data
+  facebook_ads AS
+  (
+  SELECT
+  date,
+  FORMAT_DATE('%A', date) AS day_of_the_week,
+  CAST(EXTRACT(WEEK from date) as string) AS week_of_the_year,
+  CAST(EXTRACT(MONTH from date) as string) AS month_of_the_year,
+  CASE 
+    WHEN REGEXP_CONTAINS(campaign, r'netherlands|^Netherlands ') THEN 'NL'
+    WHEN REGEXP_CONTAINS(campaign, r'belgium') THEN 'BE'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)BE') THEN 'BE'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)FR') THEN 'FR'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)NL') THEN 'NL'
+    WHEN REGEXP_CONTAINS(campaign, r'France') THEN 'FR'
+    WHEN REGEXP_CONTAINS(campaign, r'France') THEN 'FR'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)^BE') THEN 'BE'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)^FR') THEN 'FR'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)FR$') THEN 'FR'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)^NL') THEN 'NL'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i)^ES') THEN 'ES'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i) ES ') THEN 'ES'
+    ELSE 'NL'
+    END AS country,
+    campaign AS campaign_name,
+  'facebook_instagram' AS advertising_source,
+  CASE 
+    WHEN REGEXP_CONTAINS(campaign, r'(?i).*Engagement.*') THEN 'Engagement'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i).*Prospecting.*') THEN 'Prospecting'
+    WHEN REGEXP_CONTAINS(campaign, r'(?i).*Retargeting.*') THEN 'Retargeting'
+    ELSE 'not set'
+    END AS campaign_type,
+  ROUND(SUM(totalcost), 2) ad_cost
+FROM `crack-celerity-275610.roas_monitor.raw_facebook_3d`
+GROUP BY
+  date,
+  day_of_the_week,
+  week_of_the_year,
+  month_of_the_year,
+  country,
+  campaign_name,
+  advertising_source,
+  campaign_type
+ORDER BY
+  date    
+  ),
+  -- Tiktok Advertising data
+tiktok_ads AS
+  (
+    SELECT 
+    date,
+    FORMAT_DATE('%A', date) AS day_of_the_week,
+    CAST(EXTRACT(WEEK from date) as string) AS week_of_the_year,
+    CAST(EXTRACT(MONTH from date) as string) AS month_of_the_year,
+    CASE
+      WHEN REGEXP_CONTAINS(campaign, r'^FR \|') THEN 'FR'
+      WHEN REGEXP_CONTAINS(campaign, r'^NL \|') THEN 'NL'
+      WHEN REGEXP_CONTAINS(campaign, r'^BE \|') THEN 'BE'
+      WHEN REGEXP_CONTAINS(campaign, r'^ES \|') THEN 'ES'
+      ELSE 'unknown'
+      END
+      AS country,
+      campaign AS campaign_name,
+      ad_name,
+      'tiktok' AS advertising_source,
+      'not_set' AS campaign_type,
+      SUM(clicks) as link_clicks,
+      SUM(impressions) as impressions,
+      SUM(reach) as reach,
+      SUM(on_web_order) AS transactions,
+      ROUND(SUM(total_on_web_order_value),2) AS revenue,
+      ROUND(SUM(spend),2) as ad_cost
+  FROM `crack-celerity-275610.roas_monitor.raw_tiktok_3d`
+  GROUP BY
+    date,
+    day_of_the_week,
+    week_of_the_year,
+    month_of_the_year,
+    country,
+    campaign,
+    ad_name,
+    advertising_source,
+    campaign_type
+  ORDER BY
+    date 
+  ),
+
+    -- Pinterest Advertising data
+  pinterest_ads AS
+  (
+  SELECT
+    date,
+    FORMAT_DATE('%A', date) AS day_of_the_week,
+    CAST(EXTRACT(WEEK from date) as string) AS week_of_the_year,
+    CAST(EXTRACT(MONTH from date) as string) AS month_of_the_year,
+    CASE 
+      WHEN REGEXP_CONTAINS(campaign, r'NL \|') THEN 'NL'
+      ELSE campaign
+      END AS country,
+      campaign AS campaign_name,
+    'pinterest' AS advertising_source,
+    'not_set' AS campaign_type,
+    ROUND(SUM(spend), 2) AS ad_cost
+  FROM `crack-celerity-275610.roas_monitor.raw_pinterest_3d`
+  GROUP BY
+    date,
+    day_of_the_week,
+    week_of_the_year,
+    --account_name, ACCOUNT NAME IS MISSING IN WINDSOR TABLE
+    month_of_the_year,
+    country,
+    campaign,
+    advertising_source,
+    campaign_type
+  ORDER BY
+    date
+  ),
+    -- Snapchat Advertising data
+  snapchat_ads AS
+  (
+    SELECT 
+    date,
+    FORMAT_DATE('%A', date) AS day_of_the_week,
+    CAST(EXTRACT(WEEK from date) as string) AS week_of_the_year,
+    CAST(EXTRACT(MONTH from date) as string) AS month_of_the_year,
+    CASE
+      WHEN REGEXP_CONTAINS(campaign, r'(?i).*FR.*') THEN 'FR'
+      WHEN REGEXP_CONTAINS(campaign, r'(?i).*NL.*') THEN 'NL'
+      WHEN REGEXP_CONTAINS(campaign, r'(?i).*BE.*') THEN 'BE'
+      WHEN REGEXP_CONTAINS(campaign, r'(?i).*ES.*') THEN 'ES'
+      ELSE 'unknown'
+      END
+      AS country,
+    campaign AS campaign_name,
+    'snapchat' AS advertising_source,
+    CASE 
+      WHEN REGEXP_CONTAINS(campaign, r'(?i).*Consideration.*') THEN 'Consideration'
+      WHEN REGEXP_CONTAINS(campaign, r'(?i).*Prospecting.*') THEN 'Prospecting'
+      ELSE 'not set'
+      END AS campaign_type,
+    ROUND(SUM(spend),2) as ad_cost
+  FROM `crack-celerity-275610.roas_monitor.raw_snapchat_3d`
+  GROUP BY
+    date,
+    day_of_the_week,
+    week_of_the_year,
+    month_of_the_year,
+    country,
+    campaign,
+    advertising_source,
+    campaign_type
+  ORDER BY
+    date 
+  ),
+  -- Union advertising data
+all_advertising AS
+  (
+  (SELECT * FROM google_ads)
+  UNION ALL
+  (SELECT * FROM facebook_ads)
+  UNION ALL
+  (SELECT * FROM tiktok_ads)
+  UNION ALL
+  (SELECT * FROM pinterest_ads)
+  UNION ALL
+  (SELECT * FROM snapchat_ads)
+
+  )
+-- Union select advertising data
+SELECT
+  *
+FROM all_advertising
+
+
+-- Pre-operations for table creation and cleanup
+pre_operations {
+  CREATE TABLE IF NOT EXISTS ${self()} (
+    date DATE,
+    day_of_the_week STRING,
+    week_of_the_year STRING,
+    month_of_the_year STRING,
+    country STRING,
+    campaign_name STRING,
+    advertising_source STRING,
+    campaign_type STRING,
+    ad_cost FLOAT64
+  ) PARTITION BY date;
+
+  DELETE FROM ${self()}
+  WHERE date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL ${constants.updatedelete_start_period} DAY) 
+                  AND DATE_SUB(CURRENT_DATE(), INTERVAL ${constants.updatedelete_end_period} DAY);
+}

@@ -1,0 +1,45 @@
+config {
+  type: "table",
+  schema: "analytics",
+  name: "google_analytics_roas_ad_content_prod_weekly",
+  description: "",
+}
+
+SELECT
+  DATE_TRUNC(date, WEEK(MONDAY)) AS week_start_date,
+  CAST(week AS STRING) AS week_of_the_year,
+  channelGrouping, 
+  custom_channelGrouping,
+  sourceMedium,
+  campaign,
+  adContent,
+  SUM(transactions) AS transactions,
+  SUM(sessions) AS sessions,
+  SUM(transactionRevenue) AS revenue
+FROM `crack-celerity-275610.analytics.google_analytics_roas_ad_content_prod`
+GROUP BY
+  week_start_date,
+  week_of_the_year,
+  channelGrouping, 
+  custom_channelGrouping,
+  sourceMedium,
+  campaign,
+  adContent
+ORDER BY
+  week_start_date DESC, channelGrouping
+
+-- Pre-operations for table creation and cleanup
+pre_operations {
+  CREATE TABLE IF NOT EXISTS ${self()} (
+    week_start_date DATE,
+    week_of_the_year STRING,
+    channelGrouping STRING, 
+    custom_channelGrouping STRING,
+    sourceMedium STRING,
+    campaign STRING,
+    adContent STRING,
+    transactions INT64,
+    sessions INT64,
+    revenue FLOAT64,
+  ) ;
+}

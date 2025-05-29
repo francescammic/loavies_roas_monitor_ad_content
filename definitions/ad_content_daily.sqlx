@@ -8,35 +8,9 @@ config {
   }
 }
 
-
 WITH 
-google_ads AS (
- SELECT
-  date,
-  FORMAT_DATE('%A', date) AS day_of_the_week,
-  CAST(EXTRACT(WEEK FROM date) AS STRING) AS week_of_the_year,
-  CAST(EXTRACT(MONTH FROM date) AS STRING) AS month_of_the_year,
-    CASE 
-    WHEN REGEXP_CONTAINS(account_name, r'(?i)NL') THEN 'NL'
-    WHEN REGEXP_CONTAINS(campaign, r'(?i)BE') THEN 'BE'
-    WHEN REGEXP_CONTAINS(campaign, r'(?i)FR') THEN 'FR'
-    ELSE 'NOT SET'
-    END AS country,
-  campaign AS campaign_name,
-  'google_ads' AS advertising_source,
-  CASE
-      WHEN REGEXP_CONTAINS(campaign, r'(?i).*branded.*') THEN 'branded'
-      WHEN NOT REGEXP_CONTAINS(campaign, r'(?i).*branded.*') THEN 'non-branded'
-      ELSE campaign
-    END AS campaign_type,
-  cost AS ad_cost
-FROM `roas_monitor.googlegoogle_ads_3d`
-)
-,
-
   -- Facebook Advertising data
-  facebook_ads AS
-  (
+  facebook_ads AS(
   SELECT
   date,
   FORMAT_DATE('%A', date) AS day_of_the_week,
@@ -58,7 +32,8 @@ FROM `roas_monitor.googlegoogle_ads_3d`
     WHEN REGEXP_CONTAINS(campaign, r'(?i) ES ') THEN 'ES'
     ELSE 'NL'
     END AS country,
-    campaign AS campaign_name,
+  campaign AS campaign_name,
+  ad_name,
   'facebook_instagram' AS advertising_source,
   CASE 
     WHEN REGEXP_CONTAINS(campaign, r'(?i).*Engagement.*') THEN 'Engagement'
@@ -66,7 +41,12 @@ FROM `roas_monitor.googlegoogle_ads_3d`
     WHEN REGEXP_CONTAINS(campaign, r'(?i).*Retargeting.*') THEN 'Retargeting'
     ELSE 'not set'
     END AS campaign_type,
-  ROUND(SUM(totalcost), 2) ad_cost
+  SUM(link_clicks) AS link_clicks,
+  SUM(impressions) AS impressions,
+  SUM(reach) AS reach,
+  SUM(actions_offsite_conversion_fb_pixel_purchase ) AS transactions,
+  ROUND(SUM(action_values_offsite_conversion_fb_pixel_purchase),2) AS revenue,
+  ROUND(SUM(totalcost),2) AS ad_cost
 FROM `crack-celerity-275610.roas_monitor.raw_facebook_3d`
 GROUP BY
   date,
@@ -75,14 +55,15 @@ GROUP BY
   month_of_the_year,
   country,
   campaign_name,
+  ad_name,
   advertising_source,
   campaign_type
 ORDER BY
   date    
   ),
-  -- Tiktok Advertising data
-tiktok_ads AS
-  (
+
+  -- Tiktok Advertising data 
+tiktok_ads AS(
     SELECT 
     date,
     FORMAT_DATE('%A', date) AS day_of_the_week,
@@ -94,18 +75,17 @@ tiktok_ads AS
       WHEN REGEXP_CONTAINS(campaign, r'^BE \|') THEN 'BE'
       WHEN REGEXP_CONTAINS(campaign, r'^ES \|') THEN 'ES'
       ELSE 'unknown'
-      END
-      AS country,
-      campaign AS campaign_name,
-      ad_name,
-      'tiktok' AS advertising_source,
-      'not_set' AS campaign_type,
-      SUM(clicks) as link_clicks,
-      SUM(impressions) as impressions,
-      SUM(reach) as reach,
-      SUM(on_web_order) AS transactions,
-      ROUND(SUM(total_on_web_order_value),2) AS revenue,
-      ROUND(SUM(spend),2) as ad_cost
+      END AS country,
+    campaign AS campaign_name,
+    ad_name,
+    'tiktok' AS advertising_source,
+    'not_set' AS campaign_type,
+    SUM(clicks) AS link_clicks,
+    SUM(impressions) AS impressions,
+    SUM(reach) AS reach,
+    SUM(on_web_order) AS transactions,
+    ROUND(SUM(total_on_web_order_value),2) AS revenue,
+    ROUND(SUM(spend),2) AS ad_cost
   FROM `crack-celerity-275610.roas_monitor.raw_tiktok_3d`
   GROUP BY
     date,
@@ -113,7 +93,7 @@ tiktok_ads AS
     week_of_the_year,
     month_of_the_year,
     country,
-    campaign,
+    campaign_name,
     ad_name,
     advertising_source,
     campaign_type
@@ -122,8 +102,7 @@ tiktok_ads AS
   ),
 
     -- Pinterest Advertising data
-  pinterest_ads AS
-  (
+  pinterest_ads AS(
   SELECT
     date,
     FORMAT_DATE('%A', date) AS day_of_the_week,
@@ -133,27 +112,32 @@ tiktok_ads AS
       WHEN REGEXP_CONTAINS(campaign, r'NL \|') THEN 'NL'
       ELSE campaign
       END AS country,
-      campaign AS campaign_name,
+    campaign AS campaign_name,
+    pin_promotion_name as ad_name,
     'pinterest' AS advertising_source,
     'not_set' AS campaign_type,
-    ROUND(SUM(spend), 2) AS ad_cost
-  FROM `crack-celerity-275610.roas_monitor.raw_pinterest_3d`
+    SUM(outbound_clicks) AS link_clicks,
+    SUM(impressions) AS impressions,
+    SUM(reach) AS reach,
+    SUM(total_checkout) AS transactions,
+    ROUND(SUM(checkout_revenue),2) AS revenue,
+    ROUND(SUM(spend),2) AS ad_cost
+  FROM `crack-celerity-275610.roas_monitor.pinterest_test` --when pinterest table is fixed, fix this to raw_pinterest_3d
   GROUP BY
     date,
     day_of_the_week,
     week_of_the_year,
-    --account_name, ACCOUNT NAME IS MISSING IN WINDSOR TABLE
     month_of_the_year,
     country,
-    campaign,
+    campaign_name,
+    ad_name,
     advertising_source,
     campaign_type
   ORDER BY
     date
   ),
-    -- Snapchat Advertising data
-  snapchat_ads AS
-  (
+    -- Snapchat Advertising data --new columns added
+  snapchat_ads AS(
     SELECT 
     date,
     FORMAT_DATE('%A', date) AS day_of_the_week,
@@ -165,16 +149,21 @@ tiktok_ads AS
       WHEN REGEXP_CONTAINS(campaign, r'(?i).*BE.*') THEN 'BE'
       WHEN REGEXP_CONTAINS(campaign, r'(?i).*ES.*') THEN 'ES'
       ELSE 'unknown'
-      END
-      AS country,
+      END AS country,
     campaign AS campaign_name,
+    ad_name,
     'snapchat' AS advertising_source,
     CASE 
       WHEN REGEXP_CONTAINS(campaign, r'(?i).*Consideration.*') THEN 'Consideration'
       WHEN REGEXP_CONTAINS(campaign, r'(?i).*Prospecting.*') THEN 'Prospecting'
       ELSE 'not set'
       END AS campaign_type,
-    ROUND(SUM(spend),2) as ad_cost
+    SUM(clicks) AS link_clicks,
+    SUM(paid_impressions) AS impressions,
+    SUM(total_reach) AS reach,
+    SUM(conversion_purchases) AS transactions,
+    ROUND(SUM(conversion_purchases_value),2) AS revenue,
+    ROUND(SUM(spend),2) AS ad_cost
   FROM `crack-celerity-275610.roas_monitor.raw_snapchat_3d`
   GROUP BY
     date,
@@ -182,7 +171,8 @@ tiktok_ads AS
     week_of_the_year,
     month_of_the_year,
     country,
-    campaign,
+    campaign_name,
+    ad_name,
     advertising_source,
     campaign_type
   ORDER BY
@@ -191,8 +181,6 @@ tiktok_ads AS
   -- Union advertising data
 all_advertising AS
   (
-  (SELECT * FROM google_ads)
-  UNION ALL
   (SELECT * FROM facebook_ads)
   UNION ALL
   (SELECT * FROM tiktok_ads)
@@ -206,6 +194,12 @@ all_advertising AS
 SELECT
   *
 FROM all_advertising
+${when(incremental(), 
+  `WHERE date > (
+     SELECT IFNULL(MAX(date), DATE("2024-12-30"))
+     FROM ${self()}
+  )`
+)}
 
 
 -- Pre-operations for table creation and cleanup
@@ -217,8 +211,14 @@ pre_operations {
     month_of_the_year STRING,
     country STRING,
     campaign_name STRING,
+    ad_name STRING,
     advertising_source STRING,
     campaign_type STRING,
+    link_clicks INT64,
+    impressions INT64,
+    reach INT64,
+    transactions INT64,
+    revenue FLOAT64, 
     ad_cost FLOAT64
   ) PARTITION BY date;
 

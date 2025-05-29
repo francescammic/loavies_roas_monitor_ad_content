@@ -11,16 +11,24 @@ SELECT
   month_of_the_year,
   country,
   campaign_name,
+  ad_name,
   advertising_source,
   campaign_type,
-  SUM(ad_cost) AS weekly_ad_cost
+  SUM(link_clicks) AS link_clicks,
+  SUM(impressions) AS impressions,
+  SUM(reach) AS reach,
+  SUM(transactions) AS transactions,
+  SUM(revenue) AS revenue,
+  SUM(ad_cost) AS ad_cost
 FROM ${ref('roas_monitor_ad_content_prod_daily')}
+WHERE date > '2024-12-30' --start of first week of the year
 GROUP BY
   week_start_date,
   week_of_the_year,
   month_of_the_year,
   country,
   campaign_name,
+  ad_name,
   advertising_source,
   campaign_type
 ORDER BY
@@ -34,9 +42,15 @@ pre_operations {
     month_of_the_year STRING,
     country STRING,
     campaign_name STRING,
+    ad_name STRING,
     advertising_source STRING,
     campaign_type STRING,
-    weekly_ad_cost FLOAT64
+    link_clicks INT64,
+    impressions INT64,
+    reach INT64,
+    transactions INT64,
+    revenue FLOAT64, 
+    ad_cost FLOAT64
   ) ;
 }
 

@@ -2,7 +2,7 @@ config {
   type: "table",
   schema: "analytics",
   name: "google_analytics_roas_ad_content_prod_weekly",
-  description: "",
+  description: "ga4 ad content for marketing platforms split weekly",
 }
 
 SELECT

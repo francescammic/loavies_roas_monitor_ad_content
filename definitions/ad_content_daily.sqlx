@@ -14,7 +14,7 @@ WITH
   SELECT
   date,
   FORMAT_DATE('%A', date) AS day_of_the_week,
-  CAST(EXTRACT(WEEK from date) as string) AS week_of_the_year,
+  FORMAT_DATE('%G-%V', date) AS week_of_the_year,
   CAST(EXTRACT(MONTH from date) as string) AS month_of_the_year,
   CASE 
     WHEN REGEXP_CONTAINS(campaign, r'netherlands|^Netherlands ') THEN 'NL'
@@ -67,7 +67,7 @@ tiktok_ads AS(
     SELECT 
     date,
     FORMAT_DATE('%A', date) AS day_of_the_week,
-    CAST(EXTRACT(WEEK from date) as string) AS week_of_the_year,
+    FORMAT_DATE('%G-%V', date) AS week_of_the_year,
     CAST(EXTRACT(MONTH from date) as string) AS month_of_the_year,
     CASE
       WHEN REGEXP_CONTAINS(campaign, r'^FR \|') THEN 'FR'
@@ -106,7 +106,7 @@ tiktok_ads AS(
   SELECT
     date,
     FORMAT_DATE('%A', date) AS day_of_the_week,
-    CAST(EXTRACT(WEEK from date) as string) AS week_of_the_year,
+    FORMAT_DATE('%G-%V', date) AS week_of_the_year,
     CAST(EXTRACT(MONTH from date) as string) AS month_of_the_year,
     CASE 
       WHEN REGEXP_CONTAINS(campaign, r'NL \|') THEN 'NL'
@@ -141,7 +141,7 @@ tiktok_ads AS(
     SELECT 
     date,
     FORMAT_DATE('%A', date) AS day_of_the_week,
-    CAST(EXTRACT(WEEK from date) as string) AS week_of_the_year,
+    FORMAT_DATE('%G-%V', date) AS week_of_the_year,
     CAST(EXTRACT(MONTH from date) as string) AS month_of_the_year,
     CASE
       WHEN REGEXP_CONTAINS(campaign, r'(?i).*FR.*') THEN 'FR'

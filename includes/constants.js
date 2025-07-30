@@ -15,7 +15,7 @@ const dataset_output = 'analytics' ;
 
 
 // -- VARIABLES --
-const updatedelete_start_period = 4 ;
+const updatedelete_start_period = 7 ;
 const updatedelete_end_period = 0 ;
 
 

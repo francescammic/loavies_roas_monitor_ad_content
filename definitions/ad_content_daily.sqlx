@@ -113,7 +113,7 @@ tiktok_ads AS(
       ELSE campaign
       END AS country,
     campaign AS campaign_name,
-    pin_promotion_name as ad_name,
+    CAST(NULL AS STRING) AS ad_name,
     'pinterest' AS advertising_source,
     'not_set' AS campaign_type,
     SUM(outbound_clicks) AS link_clicks,
@@ -122,7 +122,7 @@ tiktok_ads AS(
     SUM(total_checkout) AS transactions,
     ROUND(SUM(checkout_revenue),2) AS revenue,
     ROUND(SUM(spend),2) AS ad_cost
-  FROM `crack-celerity-275610.roas_monitor.pinterest_test` --when pinterest table is fixed, fix this to raw_pinterest_3d
+  FROM `crack-celerity-275610.roas_monitor.raw_pinterest_3d` --when pinterest table is fixed, fix this to raw_pinterest_3d
   GROUP BY
     date,
     day_of_the_week,
